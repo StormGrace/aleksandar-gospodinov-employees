@@ -1,1 +1,1 @@
-Trainee Candidation, HW Assignment - 'Team Longest Period'
+Trainee Candidacy, HW Assignment - 'Team Longest Period'
