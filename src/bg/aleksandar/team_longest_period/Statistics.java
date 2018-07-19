@@ -71,8 +71,9 @@ public class Statistics {
     
     //Creates the Teams and Prints the Team with the highest common work period.
     public void byHighestWorktime() {
+	try {
 	 Map<Project, ArrayList<ArrayList<Employee>>> teams = generateTeams();
- 
+	 
 	 for(ArrayList<ArrayList<Employee>> team : teams.values()) {
 		Collections.sort(team, new SumWorkTimeComparator());
 	 }
@@ -90,11 +91,15 @@ public class Statistics {
 	 System.out.println("The TEAM that worked together the most is formed by: "
 	 	+ "Employee[" + employee1.getid() + "] and Employee[" + employee2.getid() + "]"
 	 	+ " on Project[" + project.getid() + "] for the period [" + workPeriod + "].");
+	}catch(Exception e) {
+	    System.out.println("No Teams has been found!");
+	}
     }
     
     //Creates the Teams by a Pair of two Employees who worked together.
-    public Map<Project, ArrayList<ArrayList<Employee>>> generateTeams() {
+    public Map<Project, ArrayList<ArrayList<Employee>>> generateTeams() throws Exception{
 	 Map<Project, ArrayList<ArrayList<Employee>>> teams = new HashMap<>();
+	 boolean teamExists = false;
 	 
 	//Mother of Improvisation
 	for(Entry<Project, ArrayList<Employee>> pair : database.entrySet()){
@@ -108,7 +113,8 @@ public class Statistics {
 		    
 		    if(isTeam(employee1, employee2)) {
 			ArrayList<Employee> teamEmployees = new ArrayList<>(Arrays.asList(employee1, employee2));		
-
+			teamExists = true;
+			
 			if(teams.containsKey(project)){
 			    teams.get(project).add(teamEmployees);
 			}else {
@@ -118,7 +124,8 @@ public class Statistics {
 		}
 	    }
 	}
-	return teams;
+	
+	if(teamExists == false) {throw new Exception();} else {return teams;}
     }
     
     //Outputs as a String the exact period 2 Employees worked together.
