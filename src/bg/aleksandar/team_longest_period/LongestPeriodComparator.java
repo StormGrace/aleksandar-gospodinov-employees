@@ -3,21 +3,18 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.Map.Entry;
 
-public class LongestPeriodComparator implements Comparator<Entry<Project, ArrayList<ArrayList<Employee>>>> {
+public class LongestPeriodComparator implements Comparator<Entry<Project, ArrayList<Team>>> {
 
     @Override
-    public int compare(Entry<Project, ArrayList<ArrayList<Employee>>> team1,
-	    	       Entry<Project, ArrayList<ArrayList<Employee>>> team2) {
+    public int compare(Entry<Project, ArrayList<Team>> firstTeam,
+	    	       Entry<Project, ArrayList<Team>> secondTeam) {
 
-	int team1worktime = team1.getValue().get(0).get(0).getdaysworked() 
-			  + team1.getValue().get(0).get(1).getdaysworked();
+	int team1TotalWorkTime = firstTeam.getValue().get(0).getDaysWorked();
+	int team2TotalWorkTime = secondTeam.getValue().get(0).getDaysWorked();
 
-	int team2worktime = team2.getValue().get(0).get(0).getdaysworked() 
-			  + team2.getValue().get(0).get(1).getdaysworked();
-
-	if (team2worktime < team1worktime) {
+	if (team2TotalWorkTime < team1TotalWorkTime) {
 	    return -1;
-	} else if (team2worktime > team1worktime) {
+	} else if (team2TotalWorkTime > team1TotalWorkTime) {
 	    return 1;
 	} else {
 	    return 0;

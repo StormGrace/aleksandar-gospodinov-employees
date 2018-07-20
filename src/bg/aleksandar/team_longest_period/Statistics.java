@@ -26,7 +26,7 @@ public class Statistics {
     //Reads the Information from a File by Extracting it.
     public void readFromFile(String fileName) {
 	File file = new File(fileName);
-	 
+	
 	try {
 	    Scanner sc = new Scanner(file);
 	    
@@ -42,18 +42,15 @@ public class Statistics {
 			
 		    from = sdf.parse(data[2]);
 		    to = sdf.parse(data[3]);
-		    
-		    dayDifference = daysBetween(from, to);
 			
 		    Project project = new Project(projectID);
-		    Employee employee = new Employee(employeeID, dayDifference, from, to);
+		    Employee employee = new Employee(project.getProjectId(), employeeID, dayDifference, from, to);
 			
 		    if(database.containsKey(project)) {	
 			database.get(project).add(employee);
 		    }else {    
 			database.put(project, new ArrayList<Employee>(Arrays.asList(employee)));
-		    }
-		    
+		    }	    
 		}catch(Exception e) {
 		    System.out.println("Error Reading Data!\nSkipping Entry...");
 		}
@@ -65,43 +62,56 @@ public class Statistics {
 	    System.out.println("Error! The Required File is either corrupted "
 	    			+ "or doesn't exist!");
 	}finally {
-	    System.out.println("The File-Reading process has stopped!");
+	    System.out.println("\nThe File-Reading process has stopped!\n");
 	}
     }
     
+
     //Creates the Teams and Prints the Team with the highest common work period.
-    public void byHighestWorktime() {
+    public void printByHighestWorktime() {
 	try {
-	 Map<Project, ArrayList<ArrayList<Employee>>> teams = generateTeams();
+	 Map<Project, ArrayList<Team>> teams = generateTeams();
 	 
-	 for(ArrayList<ArrayList<Employee>> team : teams.values()) {
-		Collections.sort(team, new SumWorkTimeComparator());
+	 //Sort each Team per Project.
+	 for(ArrayList<Team> team : teams.values()) {
+	     Collections.sort(team, new TeamWorkTimeComparator());
 	 }
- 
-	 List<Entry<Project, ArrayList<ArrayList<Employee>>>> teamSorted = new LinkedList<>(teams.entrySet());
+	 
+	 //Sort each Project based on the first Team entry.
+	 List<Entry<Project, ArrayList<Team>>> teamSorted = new LinkedList<>(teams.entrySet());
 	 Collections.sort(teamSorted, new LongestPeriodComparator());
 	 
-	 Project project = teamSorted.get(0).getKey();
+	 Team teamHighestWorkTime = teamSorted.get(0).getValue().get(0);
 	 
-	 Employee employee1 = teamSorted.get(0).getValue().get(0).get(0);
-	 Employee employee2 = teamSorted.get(0).getValue().get(0).get(1);
+	 System.out.println("The TEAM/s that collaborated the longest Time is/are formed by the given: ");
+	 System.out.println(teamHighestWorkTime.toString());
 	 
-	 String workPeriod = workPeriodToString(employee1, employee2);
+	 boolean anyDuplicateWorkTime = false;
 	 
-	 System.out.println("The TEAM that worked together the most is formed by: "
-	 	+ "Employee[" + employee1.getid() + "] and Employee[" + employee2.getid() + "]"
-	 	+ " on Project[" + project.getid() + "] for the period [" + workPeriod + "].");
+	 //Check for Teams with the same worktime performance [If Any print them].
+	 for(Entry<Project, ArrayList<Team>> team : teams.entrySet()) {
+	     if((team.getValue().get(0).getDaysWorked() == teamHighestWorkTime.getDaysWorked()) && 
+	         team.getValue().get(0).equals(teamHighestWorkTime) == false) {
+		 
+		 if(anyDuplicateWorkTime == false) {
+		     System.out.println("\nWith the same performance, collaborated:");
+		     anyDuplicateWorkTime = true;
+		 }
+		 
+		 System.out.println(team.getValue().get(0).toString());
+	     }
+	 }
 	}catch(Exception e) {
 	    System.out.println("No Teams has been found!");
 	}
     }
     
     //Creates the Teams by a Pair of two Employees who worked together.
-    public Map<Project, ArrayList<ArrayList<Employee>>> generateTeams() throws Exception{
-	 Map<Project, ArrayList<ArrayList<Employee>>> teams = new HashMap<>();
-	 boolean teamExists = false;
+    public Map<Project, ArrayList<Team>> generateTeams() throws Exception{
+	 Map<Project, ArrayList<Team>> teams = new HashMap<>();
+	 boolean anyTeamsExist = false;
 	 
-	//Mother of Improvisation
+	//Mother of Improvisation, Part-II
 	for(Entry<Project, ArrayList<Employee>> pair : database.entrySet()){
 	    Project project = pair.getKey();
 	
@@ -111,12 +121,21 @@ public class Statistics {
 		for(int i = j + 1; i < pair.getValue().size(); i++) {
 		    Employee employee2 = pair.getValue().get(i);
 		    
-		    if(isTeam(employee1, employee2)) {
-			ArrayList<Employee> teamEmployees = new ArrayList<>(Arrays.asList(employee1, employee2));		
-			teamExists = true;
+		    Team teamEmployees = new Team(employee1, employee2);	
+			
+		    if(teamEmployees.isValidTeam) {
+			anyTeamsExist = true;
 			
 			if(teams.containsKey(project)){
-			    teams.get(project).add(teamEmployees);
+			    
+			    if(teams.get(project).contains(teamEmployees)) {
+				teams.get(project).get(teams.get(project)
+						       .indexOf(teamEmployees))
+						  .addDaysWorked(teamEmployees);
+			    }else {
+				teams.get(project).add(teamEmployees);
+			    }
+			    
 			}else {
 			    teams.put(project, new ArrayList<>(Arrays.asList(teamEmployees)));
 			}	   
@@ -125,74 +144,13 @@ public class Statistics {
 	    }
 	}
 	
-	if(teamExists == false) {throw new Exception();} else {return teams;}
-    }
-    
-    //Outputs as a String the exact period 2 Employees worked together.
-    private String workPeriodToString(Employee emp1, Employee emp2) {
-	String date = "";
-	Date from1, to1, from2, to2;
-	
-	from1 = emp1.getdatefrom();
-	to1 = emp1.getdateto();
-	from2 = emp2.getdatefrom();
-	to2 = emp2.getdateto();
-
-	if(!from1.after(emp2.getdatefrom()) && !to1.before(from2) && !to1.after(to2)){
-	    
-	    date = sdf.format(from2);
-	    date += " - " + (sdf.format(to1));
-	    
-	}else if(!from1.after(from2) && !to1.before(from2) &&
-	         !to1.before(to2)){
-	    
-	    date = sdf.format(from1);
-	    date += " - " + (sdf.format(to2));
-	    
-	}else if(!from1.before(from2) && !to1.before(to2)){
-	    
-	    date = sdf.format(from1);
-	    date += " - " + (sdf.format(to2));
-	    
-	}
-	else if(!from1.before(from2) && !to1.after(to2)) {
-	    
-	    date = sdf.format(from1);
-	    date += " - " + (sdf.format(to1));
-	    
-	}
-	
-	return date;
-    }
-    
-    //Compares the Dates between two Employees to check if they worked together.
-    private boolean isTeam(Employee emp1, Employee emp2) {
-	Date from1, to1, from2, to2;
-	
-	from1 = emp1.getdatefrom();
-	to1 = emp1.getdateto();
-	from2 = emp2.getdatefrom();
-	to2 = emp2.getdateto();
-
-    	if(!from1.before(from2) && (!to1.after(to2) || (!from1.after(to2) && !to1.before(to2))) ||
-    	   !from1.after(from2) && !to1.before(from2)) {
-    	    return true;
-    	}else {
-    	    return false;
-    	}
-    }
-    
-    //Returns the day difference between 2 Dates [Not the best way of doing it].
-    private int daysBetween(Date from, Date to) {
-	long mils = to.getTime() - from.getTime();
-	long days =  mils / (1000 * 60 * 60 * 24);	
-	return (int)days;
+	if(anyTeamsExist == false) {throw new Exception();} else {return teams;}
     }
     
     public static void main(String[] Args) {
 	Statistics statistic = new Statistics();
 	
-	statistic.readFromFile("data.txt");
-	statistic.byHighestWorktime();
+	statistic.readFromFile("employees.txt");
+	statistic.printByHighestWorktime();
     }
 }

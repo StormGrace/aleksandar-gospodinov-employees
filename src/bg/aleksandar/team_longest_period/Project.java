@@ -7,7 +7,7 @@ public class Project {
 	this.projectID = projectID;
     }
     
-    public int getid() {
+    public int getProjectId() {
 	return this.projectID;
     }
 
